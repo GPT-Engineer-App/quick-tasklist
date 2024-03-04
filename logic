@@ -1,0 +1,186 @@
+// src/pages/Index.jsx
+import React, { useState, useEffect } from "react";
+import { Box, Button, Container, Input, VStack, HStack, Text, useToast, Heading, FormControl, FormLabel, useBoolean, ListItem, UnorderedList } from "@chakra-ui/react";
+import { FaPlus, FaSignInAlt, FaUserPlus } from "react-icons/fa";
+
+const Index = () => {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [todos, setTodos] = useState([]);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [newTodo, setNewTodo] = useState("");
+  const toast = useToast();
+  const [isLoading, setIsLoading] = useBoolean();
+
+  const apiBase = "https://backengine-zq2g.fly.dev";
+
+  const fetchTodos = async () => {
+    try {
+      const response = await fetch(`${apiBase}/todos`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setTodos(data);
+      }
+    } catch (error) {
+      console.error("Error fetching todos:", error);
+    }
+  };
+
+  const handleLogin = async () => {
+    setIsLoading.on();
+    try {
+      const response = await fetch(`${apiBase}/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        localStorage.setItem("token", data.access_token);
+        setIsLoggedIn(true);
+        fetchTodos();
+        setEmail("");
+        setPassword("");
+      } else {
+        toast({
+          title: "Login failed",
+          description: "Invalid credentials",
+          status: "error",
+          duration: 5000,
+          isClosable: true,
+        });
+      }
+    } catch (error) {
+      console.error("Error logging in:", error);
+    }
+    setIsLoading.off();
+  };
+
+  const handleSignup = async () => {
+    setIsLoading.on();
+    try {
+      const response = await fetch(`${apiBase}/signup`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+      });
+      if (response.ok) {
+        toast({
+          title: "Signup successful",
+          description: "Please log in",
+          status: "success",
+          duration: 5000,
+          isClosable: true,
+        });
+        setEmail("");
+        setPassword("");
+      } else {
+        toast({
+          title: "Signup failed",
+          description: "Please try again",
+          status: "error",
+          duration: 5000,
+          isClosable: true,
+        });
+      }
+    } catch (error) {
+      console.error("Error signing up:", error);
+    }
+    setIsLoading.off();
+  };
+
+  const handleAddTodo = async () => {
+    setIsLoading.on();
+    try {
+      const response = await fetch(`${apiBase}/todos`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: JSON.stringify({ title: newTodo, content: "" }),
+      });
+      if (response.ok) {
+        fetchTodos();
+        setNewTodo("");
+      } else {
+        toast({
+          title: "Add todo failed",
+          description: "Please try again",
+          status: "error",
+          duration: 5000,
+          isClosable: true,
+        });
+      }
+    } catch (error) {
+      console.error("Error adding todo:", error);
+    }
+    setIsLoading.off();
+  };
+
+  useEffect(() => {
+    if (localStorage.getItem("token")) {
+      setIsLoggedIn(true);
+      fetchTodos();
+    }
+  }, []);
+
+  if (!isLoggedIn) {
+    return (
+      <Container>
+        <VStack spacing={4}>
+          <Heading>Todo App</Heading>
+          <FormControl id="email">
+            <FormLabel>Email address</FormLabel>
+            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+          </FormControl>
+          <FormControl id="password">
+            <FormLabel>Password</FormLabel>
+            <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+          </FormControl>
+          <HStack spacing={4}>
+            <Button leftIcon={<FaSignInAlt />} colorScheme="blue" onClick={handleLogin} isLoading={isLoading}>
+              Login
+            </Button>
+            <Button leftIcon={<FaUserPlus />} colorScheme="teal" onClick={handleSignup} isLoading={isLoading}>
+              Signup
+            </Button>
+          </HStack>
+        </VStack>
+      </Container>
+    );
+  }
+
+  return (
+    <Container>
+      <VStack spacing={4}>
+        <Heading>Todo List</Heading>
+        <HStack>
+          <Input placeholder="Add new todo" value={newTodo} onChange={(e) => setNewTodo(e.target.value)} />
+          <Button leftIcon={<FaPlus />} colorScheme="teal" onClick={handleAddTodo} isLoading={isLoading}>
+            Add Todo
+          </Button>
+        </HStack>
+        <UnorderedList>
+          {todos.map((todo) => (
+            <ListItem key={todo.id}>
+              <HStack>
+                <Text>{todo.title}</Text>
+              </HStack>
+            </ListItem>
+          ))}
+        </UnorderedList>
+      </VStack>
+    </Container>
+  );
+};
+
+export default Index;
